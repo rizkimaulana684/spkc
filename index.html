@@ -1,1 +1,794 @@
 
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPK Cerdas — Rekomendasi Destinasi Wisata Indonesia</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --pri: #0c3b2e; --sec: #1a7a5c; --acc: #e8b931; --warm: #d4603a;
+  --cool: #2d8fa3; --bg: #f7f5f0; --card: #ffffff; --text: #1a1a1a;
+  --muted: #7a7a72; --border: #e5e1d8; --success: #22c55e; --danger: #ef4444;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Source Sans 3',sans-serif; background:var(--bg); color:var(--text); }
+h1,h2,h3 { font-family:'Playfair Display',Georgia,serif; }
+
+.header {
+  background: linear-gradient(135deg, var(--pri) 0%, #0a5740 50%, var(--sec) 100%);
+  padding: 32px 24px 28px; color:#fff; position:relative; overflow:hidden;
+}
+.header::before {
+  content:''; position:absolute; top:-50%; right:-20%; width:400px; height:400px;
+  background: radial-gradient(circle, rgba(232,185,49,0.12) 0%, transparent 70%);
+  border-radius:50%;
+}
+.header .subtitle { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; opacity:0.6; margin-bottom:8px; }
+.header h1 { font-size:26px; font-weight:700; line-height:1.25; margin-bottom:8px; }
+.header .desc { font-size:13px; opacity:0.75; }
+
+.container { max-width:940px; margin:0 auto; padding:0 20px 60px; }
+
+/* Navigation Tabs */
+.nav-tabs {
+  display:flex; gap:0; margin-top:-1px; background:var(--card); border-bottom:2px solid var(--border);
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.nav-tab {
+  flex:1; padding:14px 8px; text-align:center; font-size:13px; font-weight:600;
+  cursor:pointer; border:none; background:none; color:var(--muted); transition:all .25s;
+  border-bottom:3px solid transparent; position:relative;
+}
+.nav-tab:hover { color:var(--sec); background:var(--sec)08; }
+.nav-tab.active { color:var(--sec); border-bottom-color:var(--sec); }
+
+.page { display:none; animation: fadeUp .4s ease; }
+.page.active { display:block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+/* Section */
+.section-title { font-size:20px; font-weight:700; color:var(--pri); margin:28px 0 6px; }
+.section-sub { font-size:12px; color:var(--muted); margin-bottom:16px; }
+
+/* Cards */
+.card {
+  background:var(--card); border-radius:14px; padding:20px; border:1px solid var(--border);
+  margin-bottom:12px; transition: all .2s;
+}
+.card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+
+.stats-row { display:flex; gap:12px; margin-top:20px; flex-wrap:wrap; }
+.stat-card {
+  background:var(--card); border-radius:14px; padding:18px 20px; border:1px solid var(--border);
+  flex:1; min-width:160px;
+}
+.stat-card .label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:6px; }
+.stat-card .value { font-size:28px; font-weight:700; color:var(--pri); font-family:'Playfair Display',serif; }
+.stat-card .sub { font-size:11px; color:var(--muted); margin-top:3px; }
+
+/* Progress bar */
+.prog-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.prog-label { width:120px; font-size:12px; font-weight:600; }
+.prog-bar { flex:1; background:var(--border); border-radius:6px; height:24px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; transition:width .6s ease; }
+.prog-fill span { color:#fff; font-size:11px; font-weight:700; }
+
+/* Destination list */
+.dest-item {
+  background:var(--card); border-radius:12px; padding:14px 16px; border:1px solid var(--border);
+  margin-bottom:8px; cursor:pointer; transition:all .2s;
+}
+.dest-item:hover { border-color:var(--sec); }
+.dest-item.selected { border-color:var(--sec); background: var(--sec)06; }
+.dest-top { display:flex; justify-content:space-between; align-items:flex-start; }
+.dest-rank { font-size:17px; font-weight:700; color:var(--pri); font-family:'Playfair Display',serif; width:32px; }
+.dest-name { font-size:14px; font-weight:600; }
+.dest-badges { display:flex; gap:5px; margin-top:5px; flex-wrap:wrap; }
+.badge {
+  padding:2px 10px; border-radius:20px; font-size:10px; font-weight:600; letter-spacing:.3px;
+}
+.dest-cc { text-align:right; min-width:70px; }
+.dest-cc .val { font-size:20px; font-weight:700; color:var(--pri); font-family:'Playfair Display',serif; }
+.dest-cc .lbl { font-size:9px; color:var(--muted); }
+
+.dest-detail {
+  margin-top:14px; padding-top:14px; border-top:1px solid var(--border);
+  display:none; animation: fadeUp .3s ease;
+}
+.dest-item.selected .dest-detail { display:block; }
+.detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.detail-item .dl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.detail-item .dv { font-size:17px; font-weight:700; margin-top:2px; }
+
+/* Prediction Form */
+.form-group { margin-bottom:16px; }
+.form-label { font-size:13px; font-weight:600; margin-bottom:6px; display:block; color:var(--pri); }
+.form-hint { font-size:11px; color:var(--muted); margin-top:2px; }
+.form-select, .form-range-val {
+  width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border);
+  font-size:14px; font-family:'Source Sans 3',sans-serif; background:var(--card);
+  outline:none; transition:border .2s;
+}
+.form-select:focus { border-color:var(--sec); }
+input[type=range] {
+  width:100%; height:6px; -webkit-appearance:none; background:var(--border); border-radius:3px;
+  outline:none; margin-top:8px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:20px; height:20px; background:var(--sec); border-radius:50%;
+  cursor:pointer; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.15);
+}
+.range-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:4px; }
+.range-val { font-size:18px; font-weight:700; color:var(--sec); text-align:center; margin-top:4px; font-family:'Playfair Display',serif; }
+
+.btn-predict {
+  width:100%; padding:14px; background:linear-gradient(135deg, var(--pri), var(--sec));
+  color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700;
+  cursor:pointer; font-family:'Source Sans 3',sans-serif; letter-spacing:.5px;
+  transition:all .2s; box-shadow:0 4px 16px rgba(26,122,92,0.3);
+}
+.btn-predict:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(26,122,92,0.35); }
+.btn-predict:active { transform:translateY(0); }
+
+/* Results cards */
+.result-card {
+  border-radius:14px; padding:18px 20px; margin-bottom:10px; border:1px solid var(--border);
+  position:relative; overflow:hidden;
+}
+.result-card .rank-badge {
+  position:absolute; top:0; right:0; padding:6px 14px; border-radius:0 14px 0 14px;
+  font-size:13px; font-weight:700; color:#fff;
+}
+.result-card .rname { font-size:16px; font-weight:700; font-family:'Playfair Display',serif; margin-bottom:4px; }
+.result-card .rmeta { font-size:12px; color:var(--muted); margin-bottom:10px; }
+.result-card .rbar { height:8px; border-radius:4px; background:var(--border); overflow:hidden; margin-bottom:4px; }
+.result-card .rbar-fill { height:100%; border-radius:4px; transition:width .8s ease; }
+.result-card .rscore { display:flex; justify-content:space-between; font-size:11px; }
+
+.method-box {
+  padding:14px; border-radius:10px; margin-bottom:8px;
+}
+
+/* Chart container */
+.chart-container { position:relative; height:300px; margin-top:10px; }
+.chart-container.tall { height:420px; }
+
+/* Responsive */
+@media(max-width:600px) {
+  .stats-row { flex-direction:column; }
+  .detail-grid { grid-template-columns:repeat(2,1fr); }
+  .header h1 { font-size:20px; }
+  .nav-tab { font-size:11px; padding:12px 4px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="subtitle">SPK Cerdas — ETS Semester Genap 2025/2026 · Universitas Pakuan</div>
+  <h1>Sistem Rekomendasi Destinasi Wisata Indonesia</h1>
+  <div class="desc">Hybrid: AHP-TOPSIS + Random Forest — 437 destinasi · 10.000 rating · 5 kota</div>
+</div>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showPage('dashboard')">📊 Dashboard</button>
+  <button class="nav-tab" onclick="showPage('ranking')">🏆 Ranking</button>
+  <button class="nav-tab" onclick="showPage('predict')">🔮 Prediksi</button>
+  <button class="nav-tab" onclick="showPage('analysis')">📈 Analisis</button>
+  <button class="nav-tab" onclick="showPage('method')">📋 Metode</button>
+</div>
+
+<div class="container">
+
+<!-- ============ PAGE: DASHBOARD ============ -->
+<div id="page-dashboard" class="page active">
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label">🏆 Destinasi Terbaik</div>
+      <div class="value" style="font-size:18px">Taman Sungai Mudal</div>
+      <div class="sub">CC: 0.910 · Yogyakarta</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">📊 Korelasi Spearman</div>
+      <div class="value">0.669</div>
+      <div class="sub">TOPSIS ↔ RF (p=0.001)</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">✅ AHP Consistency</div>
+      <div class="value">1.53%</div>
+      <div class="sub">CR < 10% = Valid</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Bobot Kriteria (AHP)</h2>
+  <p class="section-sub">Pembobotan menggunakan Analytic Hierarchy Process — CR = 0.0153</p>
+  <div class="card" id="bobot-bars"></div>
+
+  <h2 class="section-title">Distribusi Kategori Destinasi</h2>
+  <p class="section-sub">437 destinasi wisata di 5 kota besar Indonesia</p>
+  <div class="card">
+    <div class="chart-container"><canvas id="chartKategori"></canvas></div>
+  </div>
+
+  <h2 class="section-title">Rata-rata Harga per Kategori</h2>
+  <div class="card">
+    <div class="chart-container"><canvas id="chartHarga"></canvas></div>
+  </div>
+</div>
+
+<!-- ============ PAGE: RANKING ============ -->
+<div id="page-ranking" class="page">
+  <h2 class="section-title">Ranking Destinasi Wisata</h2>
+  <p class="section-sub">Klik destinasi untuk melihat detail lengkap</p>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <select id="filterCity" class="form-select" style="width:auto;min-width:130px" onchange="renderRanking()">
+      <option>Semua Kota</option>
+      <option>Yogyakarta</option><option>Surabaya</option><option>Bandung</option>
+      <option>Semarang</option><option>Jakarta</option>
+    </select>
+    <select id="filterCat" class="form-select" style="width:auto;min-width:150px" onchange="renderRanking()">
+      <option>Semua Kategori</option>
+      <option>Cagar Alam</option><option>Budaya</option><option>Bahari</option>
+      <option>Taman Hiburan</option><option>Pusat Perbelanjaan</option><option>Tempat Ibadah</option>
+    </select>
+    <select id="sortBy" class="form-select" style="width:auto;min-width:150px" onchange="renderRanking()">
+      <option value="topsis">Rank TOPSIS</option>
+      <option value="rf">Rank Random Forest</option>
+      <option value="price_asc">Harga Termurah</option>
+      <option value="rating_desc">Rating Tertinggi</option>
+    </select>
+  </div>
+  <div id="ranking-list"></div>
+
+  <h2 class="section-title" style="margin-top:32px">TOPSIS — Closeness Coefficient</h2>
+  <div class="card">
+    <div class="chart-container tall"><canvas id="chartTopsis"></canvas></div>
+  </div>
+</div>
+
+<!-- ============ PAGE: PREDICT ============ -->
+<div id="page-predict" class="page">
+  <h2 class="section-title">🔮 Cari Rekomendasi Wisata</h2>
+  <p class="section-sub">Masukkan preferensi Anda, sistem akan merekomendasikan destinasi terbaik menggunakan TOPSIS + Random Forest</p>
+
+  <div class="card" style="border-left:3px solid var(--sec);">
+    <div class="form-group">
+      <label class="form-label">📍 Kota Tujuan</label>
+      <select id="predCity" class="form-select">
+        <option value="all">Semua Kota</option>
+        <option value="Jakarta">Jakarta</option>
+        <option value="Yogyakarta">Yogyakarta</option>
+        <option value="Bandung">Bandung</option>
+        <option value="Semarang">Semarang</option>
+        <option value="Surabaya">Surabaya</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">🏷️ Kategori Wisata</label>
+      <select id="predCat" class="form-select">
+        <option value="all">Semua Kategori</option>
+        <option value="Cagar Alam">Cagar Alam</option>
+        <option value="Budaya">Budaya</option>
+        <option value="Bahari">Bahari</option>
+        <option value="Taman Hiburan">Taman Hiburan</option>
+        <option value="Pusat Perbelanjaan">Pusat Perbelanjaan</option>
+        <option value="Tempat Ibadah">Tempat Ibadah</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">💰 Budget Maksimum</label>
+      <input type="range" id="predBudget" min="0" max="200000" step="5000" value="50000" oninput="updateBudgetLabel()">
+      <div class="range-val" id="budgetLabel">Rp 50.000</div>
+      <div class="range-labels"><span>Gratis</span><span>Rp 200.000</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">⭐ Rating Minimum</label>
+      <input type="range" id="predRating" min="3.0" max="5.0" step="0.1" value="4.0" oninput="updateRatingLabel()">
+      <div class="range-val" id="ratingLabel">4.0</div>
+      <div class="range-labels"><span>3.0</span><span>5.0</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">👤 Usia Anda</label>
+      <input type="range" id="predAge" min="18" max="60" step="1" value="25" oninput="updateAgeLabel()">
+      <div class="range-val" id="ageLabel">25 tahun</div>
+      <div class="range-labels"><span>18</span><span>60</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">⏱️ Waktu Kunjungan yang Diinginkan</label>
+      <select id="predTime" class="form-select">
+        <option value="any">Tidak masalah</option>
+        <option value="short">Singkat (≤ 60 menit)</option>
+        <option value="medium">Sedang (60-120 menit)</option>
+        <option value="long">Lama (> 120 menit)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">📊 Prioritas Utama Anda</label>
+      <p class="form-hint">Bobot ini akan digunakan untuk perhitungan TOPSIS real-time</p>
+      <div style="margin-top:10px">
+        <div class="prog-row">
+          <span class="prog-label">Rating</span>
+          <input type="range" id="wRating" min="1" max="9" value="5" style="flex:1" oninput="updateWeightLabels()">
+          <span id="wRatingVal" style="width:24px;text-align:center;font-weight:700;font-size:13px">5</span>
+        </div>
+        <div class="prog-row">
+          <span class="prog-label">User Rating</span>
+          <input type="range" id="wUser" min="1" max="9" value="7" style="flex:1" oninput="updateWeightLabels()">
+          <span id="wUserVal" style="width:24px;text-align:center;font-weight:700;font-size:13px">7</span>
+        </div>
+        <div class="prog-row">
+          <span class="prog-label">Popularitas</span>
+          <input type="range" id="wPop" min="1" max="9" value="4" style="flex:1" oninput="updateWeightLabels()">
+          <span id="wPopVal" style="width:24px;text-align:center;font-weight:700;font-size:13px">4</span>
+        </div>
+        <div class="prog-row">
+          <span class="prog-label">Harga Murah</span>
+          <input type="range" id="wPrice" min="1" max="9" value="3" style="flex:1" oninput="updateWeightLabels()">
+          <span id="wPriceVal" style="width:24px;text-align:center;font-weight:700;font-size:13px">3</span>
+        </div>
+        <div class="prog-row">
+          <span class="prog-label">Durasi</span>
+          <input type="range" id="wTime" min="1" max="9" value="2" style="flex:1" oninput="updateWeightLabels()">
+          <span id="wTimeVal" style="width:24px;text-align:center;font-weight:700;font-size:13px">2</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-predict" onclick="runPrediction()">🔍 Cari Rekomendasi Terbaik</button>
+  </div>
+
+  <div id="prediction-results" style="margin-top:20px;"></div>
+</div>
+
+<!-- ============ PAGE: ANALYSIS ============ -->
+<div id="page-analysis" class="page">
+  <h2 class="section-title">Korelasi TOPSIS vs Random Forest</h2>
+  <p class="section-sub">Scatter plot ranking kedua metode — Spearman ρ = 0.669</p>
+  <div class="card">
+    <div class="chart-container"><canvas id="chartScatter"></canvas></div>
+  </div>
+
+  <h2 class="section-title">Feature Importance (Random Forest)</h2>
+  <p class="section-sub">Faktor yang paling mempengaruhi prediksi model</p>
+  <div class="card" id="feat-bars"></div>
+
+  <h2 class="section-title">Perbandingan Top 5</h2>
+  <p class="section-sub">Radar chart performa 5 destinasi terbaik</p>
+  <div class="card">
+    <div class="chart-container"><canvas id="chartRadar"></canvas></div>
+  </div>
+</div>
+
+<!-- ============ PAGE: METHOD ============ -->
+<div id="page-method" class="page">
+  <h2 class="section-title">Metodologi Proyek</h2>
+  <p class="section-sub">Penjelasan pendekatan model-driven dan data-driven</p>
+
+  <div class="method-box" style="background:var(--sec)0a;border-left:3px solid var(--sec);">
+    <h3 style="color:var(--sec);font-size:15px;margin-bottom:8px;">Model-Driven: AHP + TOPSIS</h3>
+    <p style="font-size:13px;line-height:1.7;">
+      <strong>AHP (Analytic Hierarchy Process)</strong> digunakan untuk menghitung bobot 5 kriteria keputusan melalui matriks perbandingan berpasangan skala Saaty (1-9). Hasil: Avg User Rating (41.6%), Rating Google (26.2%), Total Reviews (16.1%), Price (9.9%), Time (6.2%). Uji konsistensi menghasilkan CR = 0.0153 (< 0.10), sehingga bobot dinyatakan valid.<br><br>
+      <strong>TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)</strong> melakukan perangkingan 20 alternatif destinasi berdasarkan jarak terhadap solusi ideal positif (A+) dan negatif (A-). Closeness Coefficient (CC) tertinggi menunjukkan destinasi terbaik.
+    </p>
+  </div>
+
+  <div class="method-box" style="background:var(--warm)0a;border-left:3px solid var(--warm);">
+    <h3 style="color:var(--warm);font-size:15px;margin-bottom:8px;">Data-Driven: Random Forest Classifier</h3>
+    <p style="font-size:13px;line-height:1.7;">
+      <strong>Random Forest</strong> (100 trees, max_depth=10) dilatih pada 10.000 data rating user untuk memprediksi kelas kepuasan wisatawan (Tinggi/Sedang/Rendah). Fitur: Rating, Price, Time_Minutes, Category, City, Age.<br><br>
+      Accuracy: 38.9% — rendah karena rating user sangat subjektif dan fitur terbatas. Namun model tetap bermanfaat untuk probabilitas prediksi per kelas dan feature importance analysis. Feature terpenting: Age (41.9%), Price (15.9%), Rating (14.7%).
+    </p>
+  </div>
+
+  <div class="method-box" style="background:var(--acc)15;border-left:3px solid var(--acc);">
+    <h3 style="color:var(--pri);font-size:15px;margin-bottom:8px;">Hybrid Integration</h3>
+    <p style="font-size:13px;line-height:1.7;">
+      Kedua pendekatan divalidasi silang menggunakan <strong>Spearman Rank Correlation</strong> (ρ = 0.669, p = 0.001), menunjukkan korelasi kuat. 11 dari 20 destinasi memiliki ranking konsisten (selisih ≤ 3). <strong>Taman Sungai Mudal</strong> berada di peringkat 1 pada kedua metode, mengkonfirmasi keandalan hasil.<br><br>
+      Pada fitur Prediksi, sistem menggabungkan kedua metode: TOPSIS menghitung ranking berdasarkan bobot kriteria user, sementara Random Forest memprediksi probabilitas kepuasan. Skor akhir = 60% TOPSIS + 40% RF untuk rekomendasi yang lebih komprehensif.
+    </p>
+  </div>
+
+  <h2 class="section-title">Dataset</h2>
+  <div class="method-box" style="background:var(--cool)0a;border-left:3px solid var(--cool);">
+    <p style="font-size:13px;line-height:1.7;">
+      <strong>Sumber:</strong> Indonesia Tourism Destination (Kaggle — aprabowo)<br>
+      <strong>tourism_with_id.csv:</strong> 437 destinasi di 5 kota (Jakarta, Yogyakarta, Bandung, Semarang, Surabaya), 6 kategori<br>
+      <strong>tourism_rating.csv:</strong> 10.000 rating dari 300 user (skala 1-5)<br>
+      <strong>user.csv:</strong> 300 profil user (lokasi, usia 18-40 tahun)<br>
+      <strong>Preprocessing:</strong> Missing value handling (median imputation), encoding kategori & kota, aggregasi rating per destinasi, normalisasi
+    </p>
+  </div>
+
+  <div style="text-align:center;margin-top:32px;padding:16px 0;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">
+    SPK Cerdas — Universitas Pakuan · S2 Ilmu Komputer · Semester Genap 2025/2026<br>
+    Dosen: Dr. Eneng Tita Tosida, STP, M.Si., M.Kom
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============================
+// DATA
+// ============================
+const DEST = [
+  {name:"Taman Sungai Mudal",cat:"Cagar Alam",city:"Yogyakarta",price:10000,rating:4.6,ur:3.33,rev:36,time:150,cc:0.910,rT:1,pred:"Tinggi",pT:0.626,rRF:1},
+  {name:"Food Junction Grand Pakuwon",cat:"Pusat Perbelanjaan",city:"Surabaya",price:0,rating:4.5,ur:3.21,rev:33,time:120,cc:0.877,rT:2,pred:"Tinggi",pT:0.425,rRF:6},
+  {name:"Museum Benteng Vredeburg",cat:"Budaya",city:"Yogyakarta",price:3000,rating:4.6,ur:3.12,rev:32,time:120,cc:0.862,rT:3,pred:"Tinggi",pT:0.473,rRF:2},
+  {name:"Pantai Kesirat",cat:"Bahari",city:"Yogyakarta",price:5000,rating:4.6,ur:3.11,rev:37,time:90,cc:0.850,rT:4,pred:"Tinggi",pT:0.346,rRF:17},
+  {name:"Gereja P.M.T.B. Surabaya",cat:"Tempat Ibadah",city:"Surabaya",price:10000,rating:4.8,ur:3.29,rev:38,time:60,cc:0.829,rT:5,pred:"Tinggi",pT:0.452,rRF:3},
+  {name:"Geoforest Watu Payung",cat:"Cagar Alam",city:"Yogyakarta",price:0,rating:4.5,ur:3.32,rev:34,time:60,cc:0.824,rT:6,pred:"Tinggi",pT:0.394,rRF:10},
+  {name:"Taman Film",cat:"Budaya",city:"Bandung",price:0,rating:4.3,ur:3.09,rev:33,time:90,cc:0.823,rT:7,pred:"Rendah",pT:0.358,rRF:14},
+  {name:"Pantai Parangtritis",cat:"Bahari",city:"Yogyakarta",price:10000,rating:4.5,ur:3.15,rev:39,time:60,cc:0.809,rT:8,pred:"Rendah",pT:0.401,rRF:8},
+  {name:"Grand Maerakaca",cat:"Taman Hiburan",city:"Semarang",price:15000,rating:4.4,ur:3.30,rev:33,time:60,cc:0.793,rT:9,pred:"Tinggi",pT:0.446,rRF:4},
+  {name:"Klenteng Jin De Yuan",cat:"Tempat Ibadah",city:"Jakarta",price:0,rating:4.5,ur:3.00,rev:32,time:60,cc:0.790,rT:10,pred:"Rendah",pT:0.374,rRF:12},
+  {name:"Kampung Batu Malakasari",cat:"Taman Hiburan",city:"Bandung",price:10000,rating:4.1,ur:3.15,rev:34,time:60,cc:0.779,rT:11,pred:"Tinggi",pT:0.436,rRF:5},
+  {name:"Gunung Lalakon",cat:"Cagar Alam",city:"Bandung",price:0,rating:4.8,ur:2.77,rev:39,time:60,cc:0.771,rT:12,pred:"Rendah",pT:0.379,rRF:11},
+  {name:"Pasar Beringharjo",cat:"Pusat Perbelanjaan",city:"Yogyakarta",price:0,rating:4.5,ur:2.74,rev:31,time:60,cc:0.747,rT:13,pred:"Rendah",pT:0.397,rRF:9},
+  {name:"Pantai Marina",cat:"Bahari",city:"Semarang",price:3000,rating:4.1,ur:2.79,rev:33,time:60,cc:0.741,rT:14,pred:"Rendah",pT:0.353,rRF:16},
+  {name:"Wisata Kuliner Pecenongan",cat:"Pusat Perbelanjaan",city:"Jakarta",price:0,rating:5.0,ur:2.64,rev:33,time:60,cc:0.741,rT:15,pred:"Rendah",pT:0.357,rRF:15},
+  {name:"The Lost World Castle",cat:"Taman Hiburan",city:"Yogyakarta",price:30000,rating:4.3,ur:2.97,rev:31,time:60,cc:0.712,rT:16,pred:"Rendah",pT:0.401,rRF:7},
+  {name:"NuArt Sculpture Park",cat:"Taman Hiburan",city:"Bandung",price:50000,rating:4.7,ur:3.06,rev:33,time:60,cc:0.664,rT:17,pred:"Rendah",pT:0.369,rRF:13},
+  {name:"De Mata Museum Jogja",cat:"Budaya",city:"Yogyakarta",price:50000,rating:4.4,ur:2.77,rev:31,time:60,cc:0.620,rT:18,pred:"Rendah",pT:0.299,rRF:18},
+  {name:"Atlantis Land Surabaya",cat:"Taman Hiburan",city:"Surabaya",price:125000,rating:4.4,ur:3.09,rev:32,time:120,cc:0.333,rT:19,pred:"Rendah",pT:0.251,rRF:20},
+  {name:"Kyotoku Floating Market",cat:"Budaya",city:"Bandung",price:175000,rating:4.5,ur:2.84,rev:32,time:150,cc:0.177,rT:20,pred:"Rendah",pT:0.286,rRF:19},
+];
+
+const BOBOT = [{k:"Avg User Rating",b:41.6},{k:"Rating Google",b:26.2},{k:"Total Reviews",b:16.1},{k:"Price (Cost)",b:9.9},{k:"Time Minutes",b:6.2}];
+const FEAT = [{f:"Age",i:41.9},{f:"Price",i:15.9},{f:"Rating",i:14.7},{f:"Time",i:11.5},{f:"Category",i:8.0},{f:"City",i:8.0}];
+const CAT_STATS = [{n:"Taman Hiburan",c:135},{n:"Budaya",c:117},{n:"Cagar Alam",c:106},{n:"Bahari",c:47},{n:"Tempat Ibadah",c:17},{n:"P. Perbelanjaan",c:15}];
+const CAT_PRICE = [{n:"Bahari",p:36915},{n:"Taman Hiburan",p:35411},{n:"Cagar Alam",p:22533},{n:"Budaya",p:15889},{n:"Tempat Ibadah",p:588},{n:"P. Perbelanjaan",p:0}];
+const COLORS = ['#2d8fa3','#d4603a','#1a7a5c','#9b5de5','#e8b931','#e76f51'];
+
+// ============================
+// NAVIGATION
+// ============================
+let currentPage = 'dashboard';
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-tab')[['dashboard','ranking','predict','analysis','method'].indexOf(page)].classList.add('active');
+  currentPage = page;
+  if(page==='ranking' && !chartTopsisRendered) renderChartTopsis();
+  if(page==='analysis' && !chartAnalysisRendered) renderAnalysisCharts();
+}
+
+// ============================
+// UTILITY
+// ============================
+function fmt(n){ return n>=1000?'Rp'+Math.round(n/1000)+'rb':n===0?'Gratis':'Rp'+n; }
+function catColor(cat){
+  const m={'Cagar Alam':'#1a7a5c','Budaya':'#d4603a','Bahari':'#2d8fa3','Taman Hiburan':'#9b5de5','Pusat Perbelanjaan':'#e8b931','Tempat Ibadah':'#e76f51'};
+  return m[cat]||'#888';
+}
+
+// ============================
+// DASHBOARD BARS
+// ============================
+function renderBobotBars(){
+  const el=document.getElementById('bobot-bars');
+  el.innerHTML=BOBOT.map(b=>`
+    <div class="prog-row">
+      <span class="prog-label">${b.k}</span>
+      <div class="prog-bar"><div class="prog-fill" style="width:${b.b}%;background:linear-gradient(90deg,#1a7a5c,#2d8fa3)"><span>${b.b}%</span></div></div>
+    </div>`).join('');
+}
+
+function renderFeatBars(){
+  const el=document.getElementById('feat-bars');
+  el.innerHTML=FEAT.map(f=>`
+    <div class="prog-row">
+      <span class="prog-label">${f.f}</span>
+      <div class="prog-bar"><div class="prog-fill" style="width:${f.i}%;background:linear-gradient(90deg,#d4603a,#e8b931)"><span>${f.i}%</span></div></div>
+    </div>`).join('');
+}
+
+// ============================
+// RANKING LIST
+// ============================
+let selectedIdx = -1;
+function renderRanking(){
+  const city=document.getElementById('filterCity').value;
+  const cat=document.getElementById('filterCat').value;
+  const sort=document.getElementById('sortBy').value;
+  let data=[...DEST];
+  if(city!=='Semua Kota') data=data.filter(d=>d.city===city);
+  if(cat!=='Semua Kategori') data=data.filter(d=>d.cat===cat);
+  if(sort==='topsis') data.sort((a,b)=>a.rT-b.rT);
+  else if(sort==='rf') data.sort((a,b)=>a.rRF-b.rRF);
+  else if(sort==='price_asc') data.sort((a,b)=>a.price-b.price);
+  else if(sort==='rating_desc') data.sort((a,b)=>b.rating-a.rating);
+
+  const el=document.getElementById('ranking-list');
+  el.innerHTML=data.map((d,i)=>{
+    const rank=sort==='topsis'?d.rT:sort==='rf'?d.rRF:(i+1);
+    return `
+    <div class="dest-item" onclick="toggleDetail(this)">
+      <div class="dest-top">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span class="dest-rank">#${rank}</span>
+            <span class="dest-name">${d.name}</span>
+          </div>
+          <div class="dest-badges" style="margin-left:32px">
+            <span class="badge" style="background:${catColor(d.cat)}18;color:${catColor(d.cat)}">${d.cat}</span>
+            <span class="badge" style="background:#d4603a18;color:#d4603a">${d.city}</span>
+            <span class="badge" style="background:${d.price===0?'#22c55e18':'#7a7a7218'};color:${d.price===0?'#22c55e':'#7a7a72'}">${fmt(d.price)}</span>
+          </div>
+        </div>
+        <div class="dest-cc"><div class="val">${d.cc.toFixed(3)}</div><div class="lbl">TOPSIS CC</div></div>
+      </div>
+      <div class="dest-detail">
+        <div class="detail-grid">
+          <div class="detail-item"><div class="dl">Rating Google</div><div class="dv">⭐ ${d.rating}</div></div>
+          <div class="detail-item"><div class="dl">Avg User Rating</div><div class="dv">${d.ur.toFixed(2)}</div></div>
+          <div class="detail-item"><div class="dl">Total Reviews</div><div class="dv">${d.rev}</div></div>
+          <div class="detail-item"><div class="dl">Rank TOPSIS</div><div class="dv" style="color:#1a7a5c">#${d.rT}</div></div>
+          <div class="detail-item"><div class="dl">Rank RF</div><div class="dv" style="color:#2d8fa3">#${d.rRF}</div></div>
+          <div class="detail-item"><div class="dl">Prediksi RF</div><div class="dv" style="color:${d.pred==='Tinggi'?'#22c55e':'#d4603a'}">${d.pred} (${(d.pT*100).toFixed(0)}%)</div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDetail(el){
+  const wasSelected = el.classList.contains('selected');
+  document.querySelectorAll('.dest-item').forEach(e=>e.classList.remove('selected'));
+  if(!wasSelected) el.classList.add('selected');
+}
+
+// ============================
+// PREDICTION ENGINE
+// ============================
+function updateBudgetLabel(){ document.getElementById('budgetLabel').textContent = fmt(+document.getElementById('predBudget').value); }
+function updateRatingLabel(){ document.getElementById('ratingLabel').textContent = (+document.getElementById('predRating').value).toFixed(1); }
+function updateAgeLabel(){ document.getElementById('ageLabel').textContent = document.getElementById('predAge').value+' tahun'; }
+function updateWeightLabels(){
+  ['wRating','wUser','wPop','wPrice','wTime'].forEach(id=>{
+    document.getElementById(id+'Val').textContent = document.getElementById(id).value;
+  });
+}
+
+function runPrediction(){
+  const city = document.getElementById('predCity').value;
+  const cat = document.getElementById('predCat').value;
+  const budget = +document.getElementById('predBudget').value;
+  const minRating = +document.getElementById('predRating').value;
+  const age = +document.getElementById('predAge').value;
+  const timeFilter = document.getElementById('predTime').value;
+
+  // User weights (raw)
+  const wR = +document.getElementById('wRating').value;
+  const wU = +document.getElementById('wUser').value;
+  const wP = +document.getElementById('wPop').value;
+  const wPr = +document.getElementById('wPrice').value;
+  const wT = +document.getElementById('wTime').value;
+  const wSum = wR+wU+wP+wPr+wT;
+  const weights = [wR/wSum, wU/wSum, wP/wSum, wPr/wSum, wT/wSum];
+
+  // Filter destinations
+  let candidates = [...DEST];
+  if(city!=='all') candidates = candidates.filter(d=>d.city===city);
+  if(cat!=='all') candidates = candidates.filter(d=>d.cat===cat);
+  candidates = candidates.filter(d=>d.price<=budget && d.rating>=minRating);
+  if(timeFilter==='short') candidates = candidates.filter(d=>d.time<=60);
+  else if(timeFilter==='medium') candidates = candidates.filter(d=>d.time>60&&d.time<=120);
+  else if(timeFilter==='long') candidates = candidates.filter(d=>d.time>120);
+
+  const resEl = document.getElementById('prediction-results');
+
+  if(candidates.length===0){
+    resEl.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--muted);">
+      <div style="font-size:40px;margin-bottom:12px;">😕</div>
+      <div style="font-size:15px;font-weight:600;">Tidak ada destinasi yang cocok</div>
+      <div style="font-size:13px;margin-top:6px;">Coba perluas filter budget, rating, atau kategori Anda</div>
+    </div>`;
+    return;
+  }
+
+  // TOPSIS calculation with user weights
+  const matrix = candidates.map(d=>[d.rating, d.ur, d.rev, d.price, d.time]);
+  const n = matrix.length;
+  const m = 5;
+
+  // Vector normalization
+  const colSqSum = Array(m).fill(0);
+  matrix.forEach(row=>row.forEach((v,j)=>colSqSum[j]+=v*v));
+  const norm = matrix.map(row=>row.map((v,j)=>v/Math.sqrt(colSqSum[j])));
+
+  // Weighted normalized
+  const weighted = norm.map(row=>row.map((v,j)=>v*weights[j]));
+
+  // Ideal solutions: [benefit, benefit, benefit, cost, benefit]
+  const isB = [true,true,true,false,true];
+  const aPlus = Array(m).fill(0).map((_,j)=>{
+    const col=weighted.map(r=>r[j]);
+    return isB[j]?Math.max(...col):Math.min(...col);
+  });
+  const aMinus = Array(m).fill(0).map((_,j)=>{
+    const col=weighted.map(r=>r[j]);
+    return isB[j]?Math.min(...col):Math.max(...col);
+  });
+
+  // Distances & CC
+  const results = candidates.map((d,i)=>{
+    let dPlus=0, dMinus=0;
+    weighted[i].forEach((v,j)=>{
+      dPlus += (v-aPlus[j])**2;
+      dMinus += (v-aMinus[j])**2;
+    });
+    dPlus = Math.sqrt(dPlus);
+    dMinus = Math.sqrt(dMinus);
+    const cc = dMinus/(dPlus+dMinus);
+
+    // RF probability simulation based on age influence
+    const ageFactor = age < 25 ? 0.05 : age < 35 ? 0 : -0.05;
+    const priceFactor = d.price === 0 ? 0.05 : d.price > 50000 ? -0.08 : 0;
+    const adjPT = Math.min(0.95, Math.max(0.05, d.pT + ageFactor + priceFactor));
+
+    // Hybrid score: 60% TOPSIS + 40% RF
+    const hybrid = 0.6 * cc + 0.4 * adjPT;
+
+    return {...d, ccNew: cc, adjPT, hybrid};
+  });
+
+  results.sort((a,b)=>b.hybrid-a.hybrid);
+
+  // Render
+  const topColors = ['linear-gradient(135deg,#f0fdf4,#dcfce7)','linear-gradient(135deg,#f0f9ff,#e0f2fe)','linear-gradient(135deg,#fefce8,#fef9c3)','linear-gradient(135deg,#fdf4ff,#f5d0fe)','linear-gradient(135deg,#fff7ed,#fed7aa)'];
+  const rankColors = ['#22c55e','#2d8fa3','#e8b931','#9b5de5','#d4603a'];
+
+  resEl.innerHTML = `
+    <h2 class="section-title">🎯 Hasil Rekomendasi (${results.length} destinasi)</h2>
+    <p class="section-sub">Skor Hybrid = 60% TOPSIS (bobot Anda) + 40% Random Forest (prediksi ML)</p>
+    ${results.slice(0,10).map((d,i)=>`
+      <div class="result-card" style="background:${topColors[i%5]}">
+        <div class="rank-badge" style="background:${rankColors[i%5]}">#${i+1}</div>
+        <div class="rname">${d.name}</div>
+        <div class="rmeta">
+          <span class="badge" style="background:${catColor(d.cat)}18;color:${catColor(d.cat)}">${d.cat}</span>
+          <span class="badge" style="background:#d4603a18;color:#d4603a">${d.city}</span>
+          <span class="badge" style="background:${d.price===0?'#22c55e18':'#7a7a7218'};color:${d.price===0?'#22c55e':'#7a7a72'}">${fmt(d.price)}</span>
+          ⭐ ${d.rating} · 👥 ${d.rev} review · ⏱️ ${d.time} menit
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">
+          <div>
+            <div style="font-size:10px;color:var(--muted)">Skor TOPSIS</div>
+            <div class="rbar"><div class="rbar-fill" style="width:${d.ccNew*100}%;background:var(--sec)"></div></div>
+            <div class="rscore"><span>CC</span><span style="font-weight:700">${d.ccNew.toFixed(3)}</span></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted)">P(Tinggi) RF</div>
+            <div class="rbar"><div class="rbar-fill" style="width:${d.adjPT*100}%;background:var(--cool)"></div></div>
+            <div class="rscore"><span>Prob</span><span style="font-weight:700">${(d.adjPT*100).toFixed(0)}%</span></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted)">Skor Hybrid</div>
+            <div class="rbar"><div class="rbar-fill" style="width:${d.hybrid*100}%;background:var(--acc)"></div></div>
+            <div class="rscore"><span>Final</span><span style="font-weight:700">${d.hybrid.toFixed(3)}</span></div>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="font-size:14px;color:var(--pri);margin-bottom:10px;">📊 Distribusi Skor Hybrid</h3>
+      <div class="chart-container" style="height:250px"><canvas id="chartPredResult"></canvas></div>
+    </div>
+  `;
+
+  // Chart prediction result
+  new Chart(document.getElementById('chartPredResult'),{
+    type:'bar',
+    data:{
+      labels:results.slice(0,10).map(d=>d.name.length>18?d.name.slice(0,18)+'…':d.name),
+      datasets:[
+        {label:'TOPSIS (60%)',data:results.slice(0,10).map(d=>+(d.ccNew*0.6).toFixed(3)),backgroundColor:'#1a7a5c'},
+        {label:'RF (40%)',data:results.slice(0,10).map(d=>+(d.adjPT*0.4).toFixed(3)),backgroundColor:'#2d8fa3'},
+      ]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true,max:1},y:{stacked:true}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}
+    }
+  });
+}
+
+// ============================
+// CHARTS
+// ============================
+let chartTopsisRendered = false;
+let chartAnalysisRendered = false;
+
+function renderDashboardCharts(){
+  // Kategori pie
+  new Chart(document.getElementById('chartKategori'),{
+    type:'doughnut',
+    data:{
+      labels:CAT_STATS.map(c=>c.n),
+      datasets:[{data:CAT_STATS.map(c=>c.c),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:12}}}}
+  });
+
+  // Harga bar
+  new Chart(document.getElementById('chartHarga'),{
+    type:'bar',
+    data:{
+      labels:CAT_PRICE.map(c=>c.n),
+      datasets:[{label:'Rata-rata Harga (Rp)',data:CAT_PRICE.map(c=>c.p),backgroundColor:COLORS,borderRadius:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}}}}
+  });
+}
+
+function renderChartTopsis(){
+  const sorted = [...DEST].sort((a,b)=>a.rT-b.rT);
+  new Chart(document.getElementById('chartTopsis'),{
+    type:'bar',
+    data:{
+      labels:sorted.map(d=>d.name.length>22?d.name.slice(0,22)+'…':d.name),
+      datasets:[{label:'Closeness Coefficient',data:sorted.map(d=>d.cc),backgroundColor:sorted.map((d,i)=>i<5?'#1a7a5c':i<10?'#2d8fa3':i<15?'#e8b931':'#d4603a'),borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{max:1}},plugins:{legend:{display:false}}}
+  });
+  chartTopsisRendered=true;
+}
+
+function renderAnalysisCharts(){
+  // Scatter
+  new Chart(document.getElementById('chartScatter'),{
+    type:'scatter',
+    data:{
+      datasets:[
+        {label:'Destinasi',data:DEST.map(d=>({x:d.rT,y:d.rRF})),backgroundColor:'#1a7a5c',pointRadius:6,pointHoverRadius:9},
+        {label:'Garis Ideal (x=y)',data:[{x:1,y:1},{x:20,y:20}],type:'line',borderColor:'#e5e1d8',borderDash:[5,5],pointRadius:0,borderWidth:1}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:'Rank TOPSIS'},min:0,max:21},y:{title:{display:true,text:'Rank RF'},min:0,max:21}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:{callbacks:{label:function(ctx){if(ctx.datasetIndex===0){const d=DEST.find(dd=>dd.rT===ctx.raw.x&&dd.rRF===ctx.raw.y);return d?d.name+' (T:'+d.rT+', RF:'+d.rRF+')':'';} return '';}}}}
+    }
+  });
+
+  // Radar top 5
+  const top5 = DEST.slice(0,5);
+  new Chart(document.getElementById('chartRadar'),{
+    type:'radar',
+    data:{
+      labels:['Rating','User Rating','Reviews','Harga Murah','Waktu'],
+      datasets: top5.map((d,i)=>({
+        label:d.name.length>20?d.name.slice(0,20)+'…':d.name,
+        data:[(d.rating/5)*100,(d.ur/5)*100,(d.rev/39)*100,d.price===0?100:Math.max(0,(1-d.price/175000)*100),(d.time/150)*100],
+        borderColor:COLORS[i],backgroundColor:COLORS[i]+'22',borderWidth:2,pointRadius:3
+      }))
+    },
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{display:false}}},plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}
+  });
+
+  chartAnalysisRendered=true;
+}
+
+// ============================
+// INIT
+// ============================
+renderBobotBars();
+renderFeatBars();
+renderDashboardCharts();
+renderRanking();
+</script>
+</body>
+</html>
